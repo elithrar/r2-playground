@@ -1,0 +1,17 @@
+{
+  "name": "r2-test",
+  "version": "1.0.0",
+  "description": "test r2",
+  "main": "./src/index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Matt Silverlock",
+  "license": "BSD-3-Clause",
+  "dependencies": {
+    "@cloudflare/workers-types": "^3.5.1"
+  },
+  "devDependencies": {
+    "wrangler": "^0.0.26"
+  }
+}

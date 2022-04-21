@@ -1,0 +1,15 @@
+name = "r2-test"
+account_id = "d458dbe698b8eef41837f941d73bc5b3"
+
+compatibility_flags = []
+workers_dev = true
+compatibility_date = "2022-04-19"
+
+main = "src/index.ts"
+
+[[r2_buckets]]
+binding = "GARBAGE"
+bucket_name = "garbage"
+
+[triggers]
+crons = ["* * * * *"]
