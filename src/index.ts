@@ -7,8 +7,8 @@ const JSON_CTYPE = "application/json; charset=utf-8";
 const BINARY_CTYPE = "application/octet-stream";
 
 async function writeObject(env: any, timestamp: number): Promise<void> {
-  let key = await crypto.randomUUID();
-  let data = { ts: timestamp };
+  let key: string = await crypto.randomUUID();
+  let data: string = JSON.stringify({ ts: timestamp });
 
   try {
     await env.GARBAGE.put(key, data);
@@ -43,7 +43,7 @@ async function getData(
       return new Response(obj.body, {
         status: 200,
         headers: {
-          "content-type": obj.httpMetadata.contentType ?? BINARY_CTYPE,
+          "content-type": obj.httpMetadata.contentType ?? BINARY_CTYPE
         },
       });
     }
@@ -57,7 +57,7 @@ async function getData(
   try {
     let timestamp = Date.now();
     await writeObject(env, timestamp);
-    let list = await env.GARBAGE.list({ limit: 1000 });
+    let list = await env.GARBAGE.list();
 
     return new Response(JSON.stringify(list, null, 2), {
       status: 200,
