@@ -6,9 +6,11 @@
 const JSON_CTYPE = "application/json; charset=utf-8";
 const BINARY_CTYPE = "application/octet-stream";
 
-async function writeObject(env: any, timestamp: number): Promise<void> {
+async function writeObject(env: any, data: Map<string, Object>): Promise<void> {
+  // Generate UUID as our object key.
   let key: string = await crypto.randomUUID();
-  let data: string = JSON.stringify({ ts: timestamp });
+  // Generate a simple object as the body.
+  let payload = JSON.stringify(data)
 
   try {
     await env.GARBAGE.put(key, data);
@@ -53,11 +55,24 @@ async function getData(
     return new Response(err, { status: 500 });
   }
 
+  try {
+    let data = new Map<string, Object>()
+    data.set("timestamp", Date.now())
+    data.set("url", req.url)
+    data.set("requestCountry", req.cf?.country ?? "")
+    data.set("requestAsn", req.cf?.asn || "")
+
+    await writeObject(env, data);
+
+  } catch (e) {
+    let err = `failed to write object: ${e}`;
+    console.log(err);
+    return new Response(err, { status: 500 });
+  }
+
   // List all objects
   try {
-    let timestamp = Date.now();
-    await writeObject(env, timestamp);
-    let list = await env.GARBAGE.list();
+    let list = await env.GARBAGE.list({limit: 1000});
 
     return new Response(JSON.stringify(list, null, 2), {
       status: 200,
