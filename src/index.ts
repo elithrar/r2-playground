@@ -5,16 +5,18 @@
 
 const JSON_CTYPE = "application/json; charset=utf-8";
 const BINARY_CTYPE = "application/octet-stream";
+const NUM_WRITES = 5
 
 async function writeObject(env: any, data: Map<string, Object>): Promise<void> {
   // Generate UUID as our object key.
   let key: string = await crypto.randomUUID();
-  // Generate a simple object as the body.
-  let payload = JSON.stringify(data)
 
   try {
-    await env.GARBAGE.put(key, data);
-    console.log(`wrote key ${key} to bucket`);
+    // Generate a simple object as the body.
+    let serialized = JSON.stringify(data);
+
+    let obj: R2Object = await env.GARBAGE.put(key, serialized);
+    console.log(`wrote key ${obj.key} to bucket: ${obj.size} bytes`);
   } catch (e) {
     let err = `failed to write ${key} to bucket: ${e}`;
     console.log(err);
@@ -45,7 +47,7 @@ async function getData(
       return new Response(obj.body, {
         status: 200,
         headers: {
-          "content-type": obj.httpMetadata.contentType ?? BINARY_CTYPE
+          "content-type": obj.httpMetadata.contentType ?? BINARY_CTYPE,
         },
       });
     }
@@ -56,14 +58,16 @@ async function getData(
   }
 
   try {
-    let data = new Map<string, Object>()
-    data.set("timestamp", Date.now())
-    data.set("url", req.url)
-    data.set("requestCountry", req.cf?.country ?? "")
-    data.set("requestAsn", req.cf?.asn || "")
+    let data = new Map<string, Object>();
+    data.set("timestamp", Date.now());
+    data.set("url", req.url);
+    data.set("requestCountry", req.cf?.country ?? "");
+    data.set("requestAsn", req.cf?.asn || "");
 
-    await writeObject(env, data);
-
+    for (let i; i < NUM_WRITES; i++) {
+      data.set("num", i)
+      await writeObject(env, data);
+    }
   } catch (e) {
     let err = `failed to write object: ${e}`;
     console.log(err);
@@ -72,7 +76,7 @@ async function getData(
 
   // List all objects
   try {
-    let list = await env.GARBAGE.list({limit: 1000});
+    let list = await env.GARBAGE.list({ limit: 1000 });
 
     return new Response(JSON.stringify(list, null, 2), {
       status: 200,
