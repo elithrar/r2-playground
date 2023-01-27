@@ -3,9 +3,13 @@
 
 /// <reference types="@cloudflare/workers-types" />
 
+interface Env {
+  GARBAGE: R2Bucket;
+}
+
 const JSON_CTYPE = "application/json; charset=utf-8";
 const BINARY_CTYPE = "application/octet-stream";
-const NUM_WRITES = 5
+const NUM_WRITES = 5;
 
 async function writeObject(env: any, data: Map<string, Object>): Promise<void> {
   // Generate UUID as our object key.
@@ -26,17 +30,41 @@ async function writeObject(env: any, data: Map<string, Object>): Promise<void> {
 
 async function getData(
   req: Request,
-  env: any,
+  env: Env,
   ctx: ExecutionContext
 ): Promise<Response> {
   let { pathname } = new URL(req.url);
+
+  // Delete some objects
+  try {
+    if ((pathname === "/delete")) {
+      let list = await env.GARBAGE.list({ limit: 10 });
+      let toDelete = [];
+      for (const obj of list.objects) {
+        toDelete.push(obj.key);
+      }
+
+      await env.GARBAGE.delete(toDelete);
+      return new Response(JSON.stringify(toDelete, null, 2), {
+        status: 200,
+        headers: {
+          "content-type": JSON_CTYPE,
+        },
+      });
+    }
+  } catch (e) {
+    let err = `failed to delete: ${e}`;
+    console.log(err);
+    return new Response(err, { status: 500 });
+  }
+
 
   // Fetch a specific object
   try {
     if (pathname !== "/" || pathname.startsWith("/favicon.ico")) {
       let key = pathname.slice(1).trim();
       console.log(`fetching object ${key}`);
-      let obj: R2ObjectBody = await env.GARBAGE.get(key);
+      let obj = await env.GARBAGE.get(key);
 
       if (obj === null) {
         return new Response(`key ${key} not found`, {
@@ -64,8 +92,8 @@ async function getData(
     data.set("requestCountry", req.cf?.country ?? "");
     data.set("requestAsn", req.cf?.asn || "");
 
-    for (let i; i < NUM_WRITES; i++) {
-      data.set("num", i)
+    for (let i = 0; i < NUM_WRITES; i++) {
+      data.set("num", i);
       await writeObject(env, data);
     }
   } catch (e) {
